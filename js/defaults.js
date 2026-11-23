@@ -7,7 +7,12 @@
 //   gallery  -> galeri foto
 //   contact  -> kontak, link sosial & dokumen
 export const DEFAULT_DATA = {
-  version: 1,
+  version: 2,
+  // Tema tampilan: disney | real | pro | photo | palembang (bisa diganti di Admin > Tampilan)
+  settings: {
+    theme: "real",
+    photo: { house: "", room: "", doorX: 50, doorY: 72 }
+  },
   profile: {
     name: "Risky",
     title: "Transaction Banking Retail Services · Bank Mandiri",
@@ -36,7 +41,8 @@ export const DEFAULT_DATA = {
           subtitle: "Bank Mandiri · Region II / Sumatera 2",
           period: "20XX – Sekarang",
           desc: "Memantau performa Livin' Merchant, mengelola data merchant, dan mendukung infrastruktur pembayaran (EDC & QRIS).",
-          image: "", link: ""
+          points: "Monitoring performa Livin' Merchant\nPengelolaan & validasi data merchant\nDukungan infrastruktur EDC & QRIS",
+          image: "", link: "", maps: ""
         },
         {
           title: "Posisi sebelumnya (isi di Admin)",
@@ -66,7 +72,7 @@ export const DEFAULT_DATA = {
           subtitle: "Jurusan · Gelar",
           period: "20XX – 20XX",
           desc: "Prestasi, organisasi, atau tugas akhir yang ingin ditonjolkan.",
-          image: "", link: ""
+          points: "", image: "", link: "", maps: ""
         }
       ]
     },
@@ -85,10 +91,10 @@ export const DEFAULT_DATA = {
     {
       id: "proyek", type: "cards", title: "Proyek", icon: "🚀", color: "#ef5d7a",
       items: [
-        { title: "Werewolf Online", subtitle: "Game multiplayer 3D", period: "", desc: "Game social-deduction berbasis web dengan desa 3D, lobby, role card & chat. Vercel + Firebase.", image: "", link: "https://werewolfonline.vercel.app" },
-        { title: "Merchant Radar", subtitle: "React + Node.js", period: "", desc: "Aplikasi pencari merchant memakai Google Places, OpenStreetMap/Overpass & Leaflet.", image: "", link: "" },
-        { title: "MarketScope", subtitle: "Market screener", period: "", desc: "Screener multi-aset (kripto, forex, saham) real-time dengan indikator teknikal.", image: "", link: "" },
-        { title: "PANTAU", subtitle: "Dashboard pasar", period: "", desc: "Dashboard monitoring pasar untuk trader Indonesia dengan widget TradingView.", image: "", link: "" }
+        { title: "Werewolf Online", subtitle: "Game multiplayer 3D", period: "", desc: "Game social-deduction berbasis web dengan desa 3D, lobby, role card & chat. Vercel + Firebase.", tags: "Game, Web", image: "", link: "https://werewolfonline.vercel.app" },
+        { title: "Merchant Radar", subtitle: "React + Node.js", period: "", desc: "Aplikasi pencari merchant memakai Google Places, OpenStreetMap/Overpass & Leaflet.", tags: "Web, Data", image: "", link: "" },
+        { title: "MarketScope", subtitle: "Market screener", period: "", desc: "Screener multi-aset (kripto, forex, saham) real-time dengan indikator teknikal.", tags: "Trading, Web", image: "", link: "" },
+        { title: "PANTAU", subtitle: "Dashboard pasar", period: "", desc: "Dashboard monitoring pasar untuk trader Indonesia dengan widget TradingView.", tags: "Trading, Data", image: "", link: "" }
       ]
     },
     {

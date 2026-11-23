@@ -29,6 +29,7 @@ export function normalize(d) {
   const out = clone(DEFAULT_DATA);
   if (!d || typeof d !== "object") return out;
   out.profile = { ...out.profile, ...(d.profile || {}) };
+  out.settings = { ...out.settings, ...(d.settings || {}), photo: { ...out.settings.photo, ...((d.settings || {}).photo || {}) } };
   if (Array.isArray(d.sections)) out.sections = d.sections.map((s, i) => ({
     id: s.id || "bagian-" + i, type: s.type || "cards", title: s.title || "Bagian",
     icon: s.icon || "⭐", color: s.color || "#5b8def",

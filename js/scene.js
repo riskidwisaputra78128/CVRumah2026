@@ -186,7 +186,7 @@ export class HouseWorld {
     this.mobile = this.low || matchMedia("(pointer: coarse)").matches || innerWidth < 760;
 
     const r = (this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" }));
-    r.setPixelRatio(Math.min(window.devicePixelRatio, this.mobile ? 1.5 : 1.75));
+    r.setPixelRatio(Math.min(window.devicePixelRatio, this.mobile ? 1.25 : 1.5));
     r.setSize(innerWidth, innerHeight);
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.85;
@@ -212,6 +212,8 @@ export class HouseWorld {
     this.ready = this.init();
   }
 
+  get hdrFile() { return "spruit_sunrise_1k.hdr"; }
+
   tex(file, { srgb = true, repeat = [1, 1] } = {}) {
     const t = this.texLoader.load(ASSET + "tex/" + file);
     t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -232,7 +234,7 @@ export class HouseWorld {
 
   async init() {
     // HDRI langit
-    const hdr = await new RGBELoader(this.manager).setDataType(THREE.HalfFloatType).loadAsync(ASSET + "hdr/spruit_sunrise_1k.hdr");
+    const hdr = await new RGBELoader(this.manager).setDataType(THREE.HalfFloatType).loadAsync(ASSET + "hdr/" + this.hdrFile);
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.envOut = pmrem.fromEquirectangular(hdr).texture;
@@ -251,6 +253,7 @@ export class HouseWorld {
     this.skyRot = sunAz - wantAz;
     this.sunDir = new THREE.Vector3(Math.cos(wantAz) * Math.cos(Math.max(sunEl, 0.42)), Math.sin(Math.max(sunEl, 0.42)), Math.sin(wantAz) * Math.cos(Math.max(sunEl, 0.42))).normalize();
 
+    await this.beforeBuild?.();
     this.buildExterior();
     this.buildInterior();
     this.showWorld("outside");
@@ -305,7 +308,7 @@ export class HouseWorld {
     // matahari
     const sun = new THREE.DirectionalLight("#ffd2a0", 2.1);
     sun.position.copy(this.sunDir).multiplyScalar(45); sun.castShadow = true;
-    sun.shadow.mapSize.set(this.mobile ? 2048 : 4096, this.mobile ? 2048 : 4096);
+    sun.shadow.mapSize.set(this.mobile ? 1024 : 2048, this.mobile ? 1024 : 2048);
     Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 110 });
     sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; sun.shadow.radius = 4;
     g.add(sun);
@@ -353,7 +356,7 @@ export class HouseWorld {
      [-12.5, 9, 0.85, 2], [12.8, 8, 0.9, 1], [0.5, -12.5, 1.2, 0], [-14, -3.5, 0.9, 0], [14.2, -4, 0.85, 2]]
       .forEach(([x, z, s, type]) => this.makeTree(g, x, z, s, type, R));
     // barisan hutan di kejauhan (membingkai halaman & menutupi latar yang mengganggu)
-    const ringN = this.low ? 18 : 42;
+    const ringN = this.low ? 18 : this.mobile ? 24 : 32;
     for (let i = 0; i < ringN; i++) {
       const a = (i / ringN) * Math.PI * 2 + R() * 0.12; if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) - Math.PI / 2) < 0.28) continue; // celah di arah kamera depan
       const rr = 24 + R() * 7;
@@ -421,7 +424,7 @@ export class HouseWorld {
       // normal mengarah ke atas agar rumput tampak menyatu dengan tanah
       sh.fragmentShader = sh.fragmentShader.replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\n normal = normalize(mix(normal, (viewMatrix * vec4(0.,1.,0.,0.)).xyz, 0.65));");
     };
-    const N = this.low ? 2500 : this.mobile ? 9000 : 18000, grass = new THREE.InstancedMesh(geo, mat, N);
+    const N = this.low ? 2500 : this.mobile ? 6000 : 12000, grass = new THREE.InstancedMesh(geo, mat, N);
     const dm = new THREE.Object3D(), col = new THREE.Color(); let k = 0, guard = 0;
     while (k < N && guard++ < 200000) {
       const a = R() * Math.PI * 2, rr = 2 + Math.sqrt(R()) * 18, x = Math.cos(a) * rr, z = Math.sin(a) * rr;
@@ -429,6 +432,7 @@ export class HouseWorld {
       if (x > 2.2 && x < 5.4 && z > 0 && z < 3.4) continue; // menara
       if (Math.abs(x - Math.sin((z - 3.85) / 0.95 * 0.55) * 0.55) < 0.75 && z > 3.3 && z < 15) continue; // jalan
       if (rr > 15 && R() > (20 - rr) / 5) continue; // menipis di tepi
+      if (this.grassFilter && !this.grassFilter(x, z)) continue;
       dm.position.set(x, 0, z); dm.rotation.set(0, R() * Math.PI, 0);
       const h = 0.25 + R() * 0.35; dm.scale.set(0.8 + R() * 0.6, h, 1); dm.updateMatrix();
       grass.setMatrixAt(k, dm.matrix);
@@ -657,9 +661,10 @@ export class HouseWorld {
     floor.castShadow = false;
 
     // dinding plester dicat hangat
-    const plaster = plasterSet("#e8d3b6", 17);
-    const wallMat = this.setMat(plaster, [3, 1.3], { roughness: 0.95 });
-    const sideMat = this.setMat(plaster, [2.8, 1.3], { roughness: 0.95 });
+    const st = this.interiorStyle ? this.interiorStyle() : {};
+    const plaster = st.wallMat ? null : plasterSet("#e8d3b6", 17);
+    const wallMat = st.wallMat || this.setMat(plaster, [3, 1.3], { roughness: 0.95 });
+    const sideMat = st.sideMat || st.wallMat || this.setMat(plaster, [2.8, 1.3], { roughness: 0.95 });
     mesh(new THREE.PlaneGeometry(W, HT), wallMat, 0, HT / 2, Dz0, g);
     const left = mesh(new THREE.PlaneGeometry(depth, HT), sideMat, -W / 2, HT / 2, cz, g); left.rotation.y = Math.PI / 2;
     const right = mesh(new THREE.PlaneGeometry(depth, HT), sideMat, W / 2, HT / 2, cz, g); right.rotation.y = -Math.PI / 2;
@@ -669,8 +674,8 @@ export class HouseWorld {
     [-4.2, -1.2, 1.8].forEach((z) => mesh(new THREE.BoxGeometry(W, 0.3, 0.3), beamM, 0, HT - 0.15, z, g));
 
     // panel kayu (wainscot) + list profil
-    const wain = this.woodMat([3, 0.4], "#5e3f2a", { roughness: 0.6 });
-    const railM = this.woodMat([3, 0.1], "#4a3120", { roughness: 0.5 });
+    const wain = st.wain || this.woodMat([3, 0.4], "#5e3f2a", { roughness: 0.6 });
+    const railM = st.railM || this.woodMat([3, 0.1], "#4a3120", { roughness: 0.5 });
     const wainscot = (len, place) => {
       const grp = new THREE.Group(); place(grp); g.add(grp);
       mesh(new THREE.BoxGeometry(len, 1.05, 0.05), wain, 0, 0.525, 0.025, grp);
@@ -689,7 +694,7 @@ export class HouseWorld {
     mesh(new THREE.BoxGeometry(1.4, 2.6, 0.08), this.woodMat([0.6, 1], "#8a5a3a"), 0, 1.3, Dz1 - 0.06, g);
 
     // karpet persia
-    const rugTex = canvasTex(1024, 1024, (c, w, h) => {
+    const rugTex = st.rugTex || canvasTex(1024, 1024, (c, w, h) => {
       c.fillStyle = "#6e1f22"; c.fillRect(0, 0, w, h);
       c.strokeStyle = "#1f2a44"; c.lineWidth = 70; c.strokeRect(35, 35, w - 70, h - 70);
       c.strokeStyle = "#c9a45c"; c.lineWidth = 8; c.strokeRect(78, 78, w - 156, h - 156); c.strokeRect(14, 14, w - 28, h - 28);
@@ -854,7 +859,7 @@ export class HouseWorld {
       if (down) {
         const dx = e.clientX - last.x, dy = e.clientY - last.y; last = { x: e.clientX, y: e.clientY };
         if (this.mode === "outside") this.orbit.dragV = -dx * 0.004;
-        if (this.mode === "inside") { this.look.yawT = clamp(this.look.yawT + dx * 0.0042, -1.9, 1.9); this.look.pitchT = clamp(this.look.pitchT + dy * 0.003, -0.35, 0.35); }
+        if (this.mode === "inside") { this.look.yawT = clamp(this.look.yawT + dx * 0.0042, -(this.yawLimit ?? 1.9), this.yawLimit ?? 1.9); this.look.pitchT = clamp(this.look.pitchT + dy * 0.003, -0.35, 0.35); }
       }
     });
     c.addEventListener("pointerup", (e) => {
@@ -898,7 +903,7 @@ export class HouseWorld {
   start() {
     this.mode = "intro";
     const o = this.orbit;
-    this.tween(4.2, (t) => { o.r = lerp(40, this.orbitR(), t); o.y = lerp(15, 6.2, t); o.theta = lerp(-1.3, 0.0, t); }, {
+    this.tween(4.2, (t) => { o.r = lerp(40, this.orbitR(), t); o.y = lerp(15, 6.2, t); o.theta = lerp(-1.3, this.orbitBase || 0, t); }, {
       easing: ease.inOut, onDone: () => { this.mode = "outside"; this.orbitBaseTime = this.time; this.cb.onReady && this.cb.onReady(); },
     });
   }
@@ -909,8 +914,9 @@ export class HouseWorld {
     if (this.mode !== "outside") return;
     this.mode = "entering"; this.cb.onEnterStart && this.cb.onEnterStart();
     const p0 = this.camera.position.clone();
-    const curve = new THREE.CatmullRomCurve3([p0, new THREE.Vector3(p0.x * 0.35, 3.0, 10), new THREE.Vector3(0, 1.9, 5.6), new THREE.Vector3(0, 1.75, 3.6), new THREE.Vector3(0, 1.7, 1.4)]);
-    const l0 = this.camLook.clone(), door = new THREE.Vector3(0, 1.65, 2.75), inside = new THREE.Vector3(0, 1.65, -6);
+    const dy = this.doorY || 0;
+    const curve = new THREE.CatmullRomCurve3([p0, new THREE.Vector3(p0.x * 0.35, 3.0 + dy, 10), new THREE.Vector3(0, 1.9 + dy, 5.6), new THREE.Vector3(0, 1.75 + dy, 3.6), new THREE.Vector3(0, 1.7 + dy, 1.4)]);
+    const l0 = this.camLook.clone(), door = new THREE.Vector3(0, 1.65 + dy, 2.75), inside = new THREE.Vector3(0, 1.65 + dy, -6);
     // pintu terbuka + cahaya membanjir
     this.tween(1.5, (t) => { this.doorPivot.rotation.y = t * 1.75; }, { delay: 0.55, easing: ease.inOut });
     this.tween(1.6, (t) => {
@@ -948,16 +954,16 @@ export class HouseWorld {
     this.cb.fade && this.cb.fade(1, 600);
     this.after(0.65, () => {
       this.showWorld("outside");
-      this.camPos.set(0, 1.8, 4.4); this.camLook.set(0, 1.6, 20);
+      this.camPos.set(0, 1.8 + (this.doorY || 0), 4.4); this.camLook.set(0, 1.6 + (this.doorY || 0), 20);
       this.doorPivot.rotation.y = 1.75;
       this.cb.fade && this.cb.fade(0, 800);
       this.tween(1.2, (t) => { this.doorPivot.rotation.y = (1 - t) * 1.75; }, { delay: 0.6, easing: ease.inOut });
       const o = this.orbit; o.drag = 0; o.dragV = 0;
-      const target = new THREE.Vector3(0, 6.2, this.orbitR());
-      const p0 = this.camPos.clone(), lA = this.camLook.clone(), lB = new THREE.Vector3(0, 1.5, 0);
+      const ob = this.orbitBase || 0, target = new THREE.Vector3(Math.sin(ob) * this.orbitR(), 6.2, Math.cos(ob) * this.orbitR());
+      const p0 = this.camPos.clone(), lA = this.camLook.clone(), lB = (this.lookTarget || new THREE.Vector3(0, 1.5, 0)).clone();
       this.tween(2.4, (t) => { this.camPos.lerpVectors(p0, target, t); this.camLook.lerpVectors(lA, lB, ease.out(Math.min(1, t * 1.6))); }, {
         delay: 0.2, easing: ease.inOut, tag: "cam",
-        onDone: () => { o.theta = 0; o.r = this.orbitR(); o.y = 6.2; this.orbitBaseTime = this.time; this.mode = "outside"; this.cb.onExited && this.cb.onExited(); },
+        onDone: () => { o.theta = this.orbitBase || 0; o.r = this.orbitR(); o.y = 6.2; this.orbitBaseTime = this.time; this.mode = "outside"; this.cb.onExited && this.cb.onExited(); },
       });
     });
   }
@@ -1000,9 +1006,22 @@ export class HouseWorld {
   }
 
   // ==================================================================
+  // turunkan resolusi otomatis bila FPS rendah (mengurangi lag)
+  adapt(rawDt) {
+    const a = (this._perf ||= { sum: 0, n: 0, pr: this.renderer.getPixelRatio() });
+    a.sum += rawDt; a.n++;
+    if (a.n < 90) return;
+    const fps = a.n / a.sum; a.sum = 0; a.n = 0;
+    if (fps < 40 && a.pr > 0.75) a.pr = Math.max(0.75, a.pr - 0.25);
+    else if (fps > 58 && a.pr < Math.min(devicePixelRatio, this.mobile ? 1.25 : 1.5)) a.pr = Math.min(a.pr + 0.25, devicePixelRatio);
+    else return;
+    this.renderer.setPixelRatio(a.pr); this.composer.setPixelRatio?.(a.pr); this.composer.setSize(innerWidth, innerHeight);
+  }
+
   loop() {
     requestAnimationFrame(this.loop);
-    const dt = Math.min(this.clock.getDelta(), 0.05); this.time += dt; const t = this.time;
+    const raw = this.clock.getDelta(); if (!this.low) this.adapt(raw);
+    const dt = Math.min(raw, 0.05); this.time += dt; const t = this.time;
     this.stepTweens(dt);
 
     if (this.world === "outside") this.animateExterior(t, dt);
@@ -1014,11 +1033,11 @@ export class HouseWorld {
         o.drag += o.dragV; o.dragV *= 0.92; o.drag = clamp(o.drag, -1.3, 1.3);
         if (Math.abs(o.dragV) < 0.0005) o.drag *= 0.995;
         const auto = Math.sin((t - (this.orbitBaseTime || 0)) * 0.12) * 0.45;
-        o.theta = lerp(o.theta, auto + o.drag + this.mouseN.x * 0.05, 0.05);
+        o.theta = lerp(o.theta, (this.orbitBase || 0) + auto + o.drag + this.mouseN.x * 0.05, 0.05);
         o.y = lerp(o.y, 6.2 + this.mouseN.y * 0.5, 0.05);
       }
       this.camPos.set(Math.sin(o.theta) * o.r, o.y, Math.cos(o.theta) * o.r);
-      this.camLook.set(0, 1.5, 0);
+      this.camLook.copy(this.lookTarget || new THREE.Vector3(0, 1.5, 0));
     } else if (this.mode === "inside") {
       const L = this.look;
       L.yaw = lerp(L.yaw, L.yawT - this.mouseN.x * 0.12, 0.07);
@@ -1078,3 +1097,5 @@ export class HouseWorld {
     });
   }
 }
+
+export { THREE, mesh, rng, lerp, clamp, ease, shade, roundRect, canvasTex, toTex, cnv, fbm, normalFromHeight, colorize, plasterSet, tileSet, stoneSet, barkSet, paintedWoodSet, leafTexture, glowSprite, glowTex, RoundedBoxGeometry, ASSET };

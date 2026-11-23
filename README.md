@@ -11,6 +11,30 @@ Tanpa build step: HTML + JavaScript biasa, Three.js sudah ada di folder `vendor/
 
 ---
 
+## Tema tampilan (pilih di Admin → 🎨 Tampilan)
+
+| Tema | Isi | Beban |
+|---|---|---|
+| 🏰 Disney 3D | rumah dongeng kartun di pulau melayang | sedang |
+| 🏡 Semi-realistis 3D | pondok PBR, langit HDRI, rumput & pohon bergoyang | berat |
+| 💼 Profesional | website portofolio modern tanpa 3D | ringan |
+| 📷 Realistis foto asli | foto rumah asli + foto 360° ruangan asli (upload di Admin) | ringan |
+| 🌉 Kota Palembang | rumah limas di tepi Musi, Jembatan Ampera, perahu ketek | sedang |
+
+Coba tema tanpa menyimpan: tambahkan `?theme=disney` / `real` / `pro` / `photo` / `palembang` di URL.
+Semua tema 3D otomatis menurunkan resolusi bila FPS turun, dan perangkat tanpa WebGL otomatis memakai tema Profesional.
+
+**Tema foto asli:** di Admin → Tampilan, upload foto depan rumah, lalu klik tepat di pintunya. Untuk ruangan, upload foto 360° (rasio 2:1) dari mode *Panorama/Photo Sphere* HP atau kamera 360. Foto contoh bawaan adalah render 3D.
+
+## Fitur tiap bingkai
+
+- **Timeline (Pengalaman/Pendidikan):** item bisa dibuka-tutup, poin pencapaian, tombol 📍 Google Maps (isi nama tempat/alamat atau link), link + teks tombolnya.
+- **Grid foto (Proyek/Sertifikat):** yang tampil hanya foto sampul; klik → popup penjelasan, tag, dan link. Filter berdasarkan tag.
+- **Keahlian:** filter per kategori + bar animasi.
+- **Galeri:** lightbox dengan tombol ‹ › / geser, keyboard, dan slideshow.
+- **Kontak:** salin email/nomor, chat WhatsApp, buka Maps, form "Kirim pesan" via WhatsApp/Email, unduh dokumen.
+- **Upload foto di Admin:** editor potong, zoom, putar, pilih ukuran hasil (Kecil/Sedang/Besar), lengkap dengan pratinjau tampilannya.
+
 ## 1. Coba dulu di komputer (Mode Demo)
 
 `js/config.js` masih `FIREBASE_CONFIG = null` → **Mode Demo**: data tersimpan di browser saja.
@@ -95,8 +119,14 @@ css/style.css       tampilan website
 css/admin.css       tampilan admin
 js/config.js        ⚙️ config Firebase & password demo
 js/defaults.js      isi CV contoh (dipakai kalau database masih kosong)
-js/scene.js         dunia 3D: rumah, interior, animasi, kamera
-js/main.js          UI: intro, menu, panel CV
+js/scene-disney.js  tema 1 (Disney)
+js/scene.js         tema 2 (semi-realistis) + dasar tema 4 & 5
+js/pro.js           tema 3 (profesional) + css/pro.css
+js/scene-photo.js   tema 4 (foto asli) + assets/photo/
+js/scene-palembang.js tema 5 (Palembang)
+js/content.js       isi & fitur tiap bingkai (dipakai semua tema)
+js/cropper.js       editor foto di Admin
+js/main.js          pemuat tema, intro, menu, panel CV
 js/store.js         simpan/muat data (Firebase atau localStorage)
 js/admin.js         editor admin
 vendor/three/       Three.js r170 (lokal, tanpa CDN)
