@@ -38,8 +38,10 @@ async function boot() {
     onHover: (h) => setTooltip(h),
     onBackground: () => { closePanel(); world.unfocus(); },
     fade: (to, ms) => fade(to, ms),
+    onProgress: (p) => { $("#loader p").textContent = `Membangun rumah… ${Math.round(p * 100)}%`; },
   });
   window.__world = world;
+  await world.ready;
   setTimeout(() => { $("#loader").classList.add("done"); world.start(); }, 250);
 }
 

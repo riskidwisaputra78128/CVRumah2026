@@ -1,6 +1,6 @@
 # 🏡 Rumah CV — CV Interaktif 3D
 
-Pengunjung disambut sebuah **rumah dongeng di pulau melayang** (langit senja, bulan, kunang-kunang, asap cerobong).
+Pengunjung disambut sebuah **rumah pondok bergaya semi-realistis di padang rumput saat matahari terbit**: langit & cahaya dari foto HDRI asli, material PBR (plester, batu alam, genteng, kayu, bata), bayangan lembut, rumput & pohon yang bergoyang tertiup angin, dan asap cerobong.
 Klik pintu → pintu terbuka, cahaya membanjir, kamera terbang masuk → di dalam ada **ruang galeri** dengan bingkai-bingkai di dinding.
 Klik bingkai → kamera mendekat & panel CV muncul (Tentang, Pengalaman, Keahlian, Pendidikan, Sertifikasi, Proyek, Galeri, Kontak).
 
@@ -104,12 +104,19 @@ database.rules.json contoh Rules Firebase
 vercel.json         cache & noindex untuk admin
 ```
 
+## Performa
+
+- Kualitas otomatis lebih ringan di HP (rumput lebih sedikit, bayangan lebih kecil).
+- Tambahkan `?q=low` di URL (mis. `rumah-risky.vercel.app/?q=low`) untuk mode super ringan di perangkat lemah.
+- Aset: `assets/hdr/spruit_sunrise_1k.hdr` (Poly Haven, CC0) dan tekstur kayu/bata/rumput dari contoh resmi three.js. Total ±3 MB.
+
 ## Kustomisasi cepat
 
 | Mau ubah | Di mana |
 |---|---|
-| Warna langit senja | `js/scene.js` → bagian `// --- langit senja ---` |
-| Warna atap / menara | `js/scene.js` → `buildHouse()` (`roofC`, cone menara `#5b63d6`) |
+| Langit / suasana | ganti file `.hdr` di `assets/hdr/` (mis. dari polyhaven.com, 1k) dan namanya di `init()` `js/scene.js` |
+| Warna plester / genteng | `js/scene.js` → `buildHouse()` (`plasterSet(...)`, `tileSet(...)`) |
+| Kecerahan | `toneMappingExposure` di `showWorld()` |
 | Posisi bingkai di dinding | `js/scene.js` → `frameSlots()` |
-| Kekuatan efek glow | `js/scene.js` → `UnrealBloomPass(..., 0.5, 0.5, 0.9)` |
+| Kekuatan efek glow | `js/scene.js` → `UnrealBloomPass(..., 0.35, 0.4, 1.25)` |
 | Font | `index.html` (Google Fonts Fredoka + Nunito) |
