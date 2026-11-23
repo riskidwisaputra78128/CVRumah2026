@@ -10,7 +10,16 @@
 //     Lihat README.md untuk langkah lengkap.
 // =====================================================================
 
-export const FIREBASE_CONFIG = null;
+export const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDADDkfjjsxud1KsL-hQ-zMEkYaCpA_zbY",
+  authDomain: "risky-3a77e.firebaseapp.com",
+  databaseURL: "https://risky-3a77e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "risky-3a77e",
+  storageBucket: "risky-3a77e.firebasestorage.app",
+  messagingSenderId: "581884662106",
+  appId: "1:581884662106:web:0c7ee2e148548f81d2a363",
+  measurementId: "G-1EZ91PNFQR"
+};
 /* Contoh:
 export const FIREBASE_CONFIG = {
   apiKey: "AIza....",
